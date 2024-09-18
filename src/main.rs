@@ -70,6 +70,29 @@ impl App {
         };
         self.todo_list_state.select(Some(i));
     }
+    fn move_to_done(&mut self) {
+        if let Some(selected) = self.todo_list_state.selected() {
+            if !self.todos.is_empty() {
+                let item = self.todos.remove(selected);
+                self.done.push(item);
+                if selected > 0 && selected == self.todos.len() {
+                    self.todo_list_state.select(Some(selected - 1));
+                }
+            }
+        }
+    }
+
+    fn move_to_todo(&mut self) {
+        if let Some(selected) = self.done_list_state.selected() {
+            if !self.done.is_empty() {
+                let item = self.done.remove(selected);
+                self.todos.push(item);
+                if selected > 0 && selected == self.done.len() {
+                    self.done_list_state.select(Some(selected - 1));
+                }
+            }
+        }
+    }
 }
 
 
@@ -108,17 +131,19 @@ fn run_app<B: tui::backend::Backend>(terminal: &mut Terminal<B>, app: &mut App) 
                     KeyCode::Char('j') => app.next(),
                     KeyCode::Char('k') => app.previous(),
                     KeyCode::Tab => {
-                        // TODO: Implement switching between TODO and DONE lists
+                        if app.todo_list_state.selected().is_some() {
+                            app.done_list_state.select(Some(0));
+                            app.todo_list_state.select(None);
+                        } else {
+                            app.todo_list_state.select(Some(0));
+                            app.done_list_state.select(None);
+                        }
                     }
                     KeyCode::Enter => {
-                        if let Some(selected) = app.todo_list_state.selected() {
-                            if !app.todos.is_empty() {
-                                let item = app.todos.remove(selected);
-                                app.done.push(item);
-                                if selected > 0 && selected == app.todos.len() {
-                                    app.todo_list_state.select(Some(selected - 1));
-                                }
-                            }
+                        if app.todo_list_state.selected().is_some() {
+                            app.move_to_done();
+                        } else if app.done_list_state.selected().is_some() {
+                            app.move_to_todo();
                         }
                     }
                     _ => {}
