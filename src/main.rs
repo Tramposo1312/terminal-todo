@@ -93,6 +93,16 @@ impl App {
             }
         }
     }
+    fn delete_selected(&mut self) {
+        if let Some(selected) = self.todo_list_state.selected() {
+            if !self.todos.is_empty() {
+                self.todos.remove(selected);
+                if selected > 0 && selected == self.todos.len() {
+                    self.todo_list_state.select(Some(selected - 1));
+                }
+            }
+        }
+    }
 }
 
 
@@ -146,6 +156,7 @@ fn run_app<B: tui::backend::Backend>(terminal: &mut Terminal<B>, app: &mut App) 
                             app.move_to_todo();
                         }
                     }
+                    KeyCode::Char('d') => app.delete_selected(),
                     _ => {}
                 },
                 InputMode::Editing => match key.code {
