@@ -44,31 +44,59 @@ impl App {
     }
 
     fn next(&mut self) {
-        let i = match self.todo_list_state.selected() {
-            Some(i) => {
-                if i >= self.todos.len() - 1 {
-                    0
-                } else {
-                    i + 1
+        if self.todo_list_state.selected().is_some() {
+            let i = match self.todo_list_state.selected() {
+                Some(i) => {
+                    if i >= self.todos.len().saturating_sub(1) {
+                        0
+                    } else {
+                        i + 1
+                    }
                 }
-            }
-            None => 0,
-        };
-        self.todo_list_state.select(Some(i));
-    }
+                None => 0,
+            };
+            self.todo_list_state.select(Some(i));
+        } else if self.done_list_state.selected().is_some() {
+            let i = match self.done_list_state.selected() {
+                Some(i) => {
+                    if i >= self.done.len().saturating_sub(1) {
+                        0
+                    } else {
+                           i + 1
+                    }
+                }                     
+                None => 0,
+            };
+            self.done_list_state.select(Some(i));
+        }
+    } 
 
     fn previous(&mut self) {
-        let i = match self.todo_list_state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.todos.len() - 1
-                } else {
-                    i - 1
+        if self.todo_list_state.selected().is_some() {
+            let i = match self.todo_list_state.selected() {
+                Some(i) => {
+                    if i == 0 {
+                        self.todos.len().saturating_sub(1)
+                    } else {
+                        i - 1
+                    }
                 }
-            }
-            None => 0,
-        };
-        self.todo_list_state.select(Some(i));
+                None => 0,
+            };
+            self.todo_list_state.select(Some(i));
+        } else if self.done_list_state.selected().is_some() {
+            let i = match self.done_list_state.selected() {
+                Some(i) => {
+                    if i == 0  {
+                        self.done.len().saturating_sub(1)
+                    } else {
+                        i - 1
+                    }
+                }
+                None => 0,
+            };
+            self.done_list_state.select(Some(i));
+        }
     }
     fn move_to_done(&mut self) {
         if let Some(selected) = self.todo_list_state.selected() {
