@@ -16,6 +16,7 @@ use crossterm::{
 enum InputMode {
     Normal,
     Editing,
+    EditingExisting,
 }
 
 struct App {
@@ -25,6 +26,7 @@ struct App {
     input_mode: InputMode,
     todo_list_state: ListState,
     done_list_state: ListState,
+    editing_index: Option<usize>,
 }
 
 impl App {
@@ -40,6 +42,7 @@ impl App {
             input_mode: InputMode::Normal,
             todo_list_state,
             done_list_state,
+            editing_index: None,
         }
     }
 
@@ -131,6 +134,37 @@ impl App {
             }
         }
     }
+    fn start_editing(&mut self) {
+        let selected = if self.todo_list_state.selected().is_some() {
+            self.todo_list_state.selected()
+        } else {
+            self.done_list_state.selected()
+        };
+
+        if let Some(index) = selected {
+            let item = if self.todo_list_state.selected().is_some() {
+                &self.todos[index]
+            } else {
+                &self.done[index]
+            };
+            self.input = item.clone();
+            self.editing_index = Some(index);
+            self.input_mode = InputMode::EditingExisting;
+        }
+    }
+
+    fn finish_editing(&mut self) {
+        if let Some(index) = self.editing_index {
+            if self.todo_list_state.selected().is_some() {
+                self.todos[index] = self.input.clone();
+            } else if self.done_list_state.selected().is_some() {
+                self.done[index] = self.input.clone()
+            }
+        }
+        self.input.clear();
+        self.editing_index = None;
+        self.input_mode = InputMode::Normal;
+    }
 }
 
 
@@ -163,6 +197,7 @@ fn run_app<B: tui::backend::Backend>(terminal: &mut Terminal<B>, app: &mut App) 
             match app.input_mode {
                 InputMode::Normal => match key.code {
                     KeyCode::Char('q') => return Ok(()),
+                    KeyCode::Char('e') => app.start_editing(),
                     KeyCode::Char('i') => {
                         app.input_mode = InputMode::Editing;
                     }
@@ -189,11 +224,9 @@ fn run_app<B: tui::backend::Backend>(terminal: &mut Terminal<B>, app: &mut App) 
                 },
                 InputMode::Editing => match key.code {
                     KeyCode::Enter => {
-                        app.todos.push(app.input.drain(..).collect());
+                        let new_todo = app.input.drain(..).collect();
+                        app.todos.push(new_todo);
                         app.input_mode = InputMode::Normal;
-                        if app.todo_list_state.selected().is_none() {
-                            app.todo_list_state.select(Some(0));
-                        }
                     }
                     KeyCode::Char(c) => {
                         app.input.push(c);
@@ -206,6 +239,21 @@ fn run_app<B: tui::backend::Backend>(terminal: &mut Terminal<B>, app: &mut App) 
                     }
                     _ => {}
                 },
+                InputMode::EditingExisting => match key.code {
+                    KeyCode::Enter => app.finish_editing(),
+                    KeyCode::Char(e) => {
+                        app.input.push(e);
+                    }
+                    KeyCode::Backspace => {
+                        app.input.pop();
+                    }
+                    KeyCode::Esc => {
+                        app.input.clear();
+                        app.editing_index = None;
+                        app.input_mode = InputMode::Normal;
+                    }
+                    _ => {}
+                }
             }
         }
     }
@@ -246,6 +294,16 @@ fn ui<B: tui::backend::Backend>(f: &mut Frame<B>, app: &mut App) {
             ],
             Style::default(),
         ),
+        InputMode::EditingExisting => (
+            vec![
+                Span::raw("Editing existing item. Press "),
+                Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to cancel, "),
+                Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to save changes"),
+            ],
+            Style::default().fg(Color::Yellow),
+        ),
     };
     let mut text = Text::from(Spans::from(msg));
     text.patch_style(style);
@@ -255,7 +313,7 @@ fn ui<B: tui::backend::Backend>(f: &mut Frame<B>, app: &mut App) {
     let input = Paragraph::new(app.input.as_ref())
         .style(match app.input_mode {
             InputMode::Normal => Style::default(),
-            InputMode::Editing => Style::default().fg(Color::Yellow),
+            InputMode::Editing | InputMode::EditingExisting => Style::default().fg(Color::Yellow),
         })
         .block(Block::default().borders(Borders::ALL).title("Input"));
     f.render_widget(input, chunks[1]);
