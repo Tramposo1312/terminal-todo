@@ -59,3 +59,5 @@
 12. **Notifications**
     - [ ] Implement a system for reminders based on due dates
     - [ ] Integrate with system notifications (if running as a daemon)
+
+(It will probably never get to this level. I just put them here cause they sound cool.)
