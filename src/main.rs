@@ -1,4 +1,7 @@
+use std::fs::{File, OpenOptions};
 use std::io;
+use std::io::{BufRead, BufReader, Write};
+use std::path::Path;
 use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
@@ -165,6 +168,60 @@ impl App {
         self.editing_index = None;
         self.input_mode = InputMode::Normal;
     }
+    pub fn save_to_file(&self, filename: &str) -> io::Result<()> {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(filename)?;
+
+        writeln!(file, "[TODO]")?;
+        for item in &self.todos {
+            writeln!(file, "{}", item)?;
+        }
+
+        writeln!(file, "[DONE]")?;
+        for item in &self.done {
+            writeln!(file, "{}", item)?;
+        }
+
+        Ok(())
+    }
+    pub fn load_from_file(filename: &str) -> io::Result<Self> {
+        let file = File::open(filename)?;
+        let reader = BufReader::new(file);
+        let mut todos = Vec::new();
+        let mut done = Vec::new();
+        let mut current_list = &mut todos;
+
+        for line in reader.lines() {
+            let line = line?;
+            match line.as_str() {
+                "[TODO]" => current_list = &mut todos,
+                "[DONE]" => current_list = &mut done,
+                _ => current_list.push(line),
+            }
+        }
+        let mut todo_list_state = ListState::default();
+        if !todos.is_empty() {
+            todo_list_state.select(Some(0));
+        }
+
+        let mut done_list_state = ListState::default();
+        if !done.is_empty() {
+            done_list_state.select(Some(0));
+        }
+
+        Ok(App {
+            todos,
+            done,
+            input: String::new(),
+            input_mode: InputMode::Normal,
+            todo_list_state,
+            done_list_state,
+            editing_index: None,
+        })
+    }
 }
 
 
@@ -175,9 +232,17 @@ fn main() -> Result<(), io::Error> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = App::new();
-    run_app(&mut terminal, &mut app)?;
 
+    let filename = "todo_list.txt";
+    let mut app = if Path::new(filename).exists() {
+        App::load_from_file(filename)?
+    } else {
+        App::new()
+    };
+
+    let res = run_app(&mut terminal, &mut app);
+    run_app(&mut terminal, &mut app)?;
+    app.save_to_file(filename)?;
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
@@ -185,6 +250,9 @@ fn main() -> Result<(), io::Error> {
         DisableMouseCapture
     )?;
     terminal.show_cursor()?;
+    if let Err(err) = res {
+        println!("{:?}", err)
+    }
 
     Ok(())
 }

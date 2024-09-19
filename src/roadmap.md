@@ -1,4 +1,4 @@
-# Feature Roadmap for terminal-todo
+# Feature Roadmap for Rust Terminal TODO App
 
 ## Core Functionality
 
@@ -7,7 +7,7 @@
    - [x] Move items from TODO to DONE
    - [x] Move items back from DONE to TODO
    - [x] Delete items from either list
-   - [ ] Edit existing items
+   - [x] Edit existing items
 
 2. **Navigation**
    - [x] Navigate through TODO list
@@ -15,8 +15,8 @@
    - [x] Switch focus between TODO and DONE lists
 
 3. **Persistence**
-   - [ ] Save TODO and DONE lists to a file
-   - [ ] Load TODO and DONE lists from a file on startup
+   - [x] Save TODO and DONE lists to a file
+   - [x] Load TODO and DONE lists from a file on startup
 
 ## User Experience Enhancements
 
